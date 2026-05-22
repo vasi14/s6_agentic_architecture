@@ -391,3 +391,19 @@ def clear() -> int:
     count = len(items)
     _save_all([])
     return count
+
+
+def reset() -> dict:
+    """
+    Reset to a completely clean slate.
+
+    Clears memory.json *and* deletes every artifact in state/artifacts/.
+    Call this before re-running a query to avoid stale state contamination.
+
+    Returns a dict with keys ``memory_cleared`` and ``artifacts_cleared``.
+    """
+    from artifacts import get_store
+
+    memory_count = clear()
+    artifact_count = get_store().clear_all()
+    return {"memory_cleared": memory_count, "artifacts_cleared": artifact_count}

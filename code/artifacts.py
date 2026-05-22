@@ -131,6 +131,15 @@ class ArtifactStore:
             meta_path.unlink()
         return existed
 
+    def clear_all(self) -> int:
+        """Delete every artifact in the store. Returns the number removed."""
+        removed = 0
+        for path in list(self.base_dir.iterdir()):
+            if path.suffix in (".bin", ".json"):
+                path.unlink()
+                removed += 1
+        return removed
+
 
 # Module-level singleton for convenience
 _store: ArtifactStore | None = None

@@ -30,6 +30,7 @@ from pydantic import BaseModel
 
 import agent6
 import events as ev
+import memory as mem
 
 HTML_PATH = Path(__file__).parent / "agent_ui.html"
 
@@ -59,6 +60,13 @@ async def start_run(req: RunRequest):
     ev.create_queue(run_id)
     asyncio.create_task(agent6.run(req.query, run_id=run_id))
     return {"run_id": run_id}
+
+
+@app.post("/reset")
+async def reset_state():
+    """Clear memory.json and all artifacts, returning counts removed."""
+    result = mem.reset()
+    return result
 
 
 @app.get("/run/{run_id}/stream")
