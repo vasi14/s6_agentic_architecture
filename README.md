@@ -217,6 +217,7 @@ death date, and three key contributions to information theory.
 
 **Recorded output log:** [Agent6 · Live Trace 1](notes/run2/Agent6%20·%20Live%20Trace%201.html)
 
+```
 ─── iter 1 ───
 [memory]
 1 hit · Fetched Claude Shannon's birth date, death date, and three key contributions ...
@@ -227,6 +228,7 @@ death date, and three key contributions to information theory.
 ANSWER: Claude Shannon was born on April 30, 1916, and died on February 24, 2001. Three key contributions to information theory include: 1) the development of the concept of entropy, 2) the creation of the...
 [done]
 all goals satisfied
+```
 ---
 
 ### Query B — Tokyo weekend activities (multi-goal + memory carryover)
@@ -239,7 +241,8 @@ weather forecast there and tell me which one is most appropriate.
 
 **Recorded output logs:**
 - [Agent6 · Live Trace 2](notes/run2/Agent6%20·%20Live%20Trace%202.html)
-
+  
+```
 Run: 1e2da20b
 ✓ complete
 ─── iter 1 ───
@@ -294,6 +297,7 @@ art:972dc81dd24828dc · 2 KB attached
 ANSWER: Based on the current weather forecast for Tokyo this Saturday and the available family-friendly options, here is my recommendation: **Weather Outlook:** Saturday in Tokyo is expected to be [insert ...
 [done]
 all goals satisfied
+```
 ---
 
 ### Query C — Mom's birthday (durable memory across runs)
@@ -313,6 +317,7 @@ When is mom's birthday?
 - Run 1: [Agent6 · Live Trace 3a](notes/run2/Agent6%20·%20Live%20Trace%203a.html)
 - Run 2: [Agent6 · Live Trace 3b](notes/run2/Agent6%20·%20Live%20Trace%203b.html)
 
+```
 Run: 5f58360e
 ✓ complete
 ─── iter 1 ───
@@ -335,8 +340,8 @@ ANSWER: I have noted that your mom's birthday is on 25 May 2026. I have schedule
 ANSWER: I have successfully scheduled the reminders for your mom's birthday on 25 May 2026: one for two weeks prior (11 May 2026) and one on the day of the birthday.
 [done]
 all goals satisfied
-
-
+```
+```
 Run: d5aa534e
 ✓ complete
 ─── iter 1 ───
@@ -349,6 +354,7 @@ Run: d5aa534e
 ANSWER: Your mom's birthday is on 25 May 2026.
 [done]
 all goals satisfied
+```
 ---
 
 ### Query D — Python asyncio best practices (multi-source synthesis)
@@ -363,6 +369,7 @@ a short numbered list of the advice they agree on.
 - [Agent6 · Live Trace 4](notes/run2/Agent6%20·%20Live%20Trace%204.html)
 - [Agent6 · Live Trace 4 (GCP variant)](notes/run2/Agent6%20·%20Live%20Trace%204%20gcp.html)
 
+```
 Run: abcf0a5b
 ✓ complete
 ─── iter 1 ───
@@ -438,6 +445,7 @@ art:1ba67fab572f1acd · 4 KB attached
 ANSWER: 1. Use asyncio for IO-bound operations, 2. Use async/await syntax, 3. Run concurrent tasks with asyncio.gather, 4. Handle exceptions properly, 5. Use asyncio.run for top-level entry point
 [done]
 all goals satisfied
+```
 ---
 
 ## Output Logs
