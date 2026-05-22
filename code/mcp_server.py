@@ -272,10 +272,14 @@ async def _crawl4ai_fetch(url: str, timeout: int = 20) -> dict:
     saved_fd = os.dup(1)
     os.dup2(2, 1)
     crawl_text = ""
-    try:
+    # Wrap the ENTIRE crawl4ai lifecycle (browser startup + page crawl +
+    # browser shutdown) in a single wait_for.  The previous code only timed
+    # out crawler.arun(), leaving Playwright/Chromium startup uncovered; a
+    # cold-start browser launch could block indefinitely and halt the agent.
+    async def _do_crawl() -> str:
         from crawl4ai import AsyncWebCrawler
         async with AsyncWebCrawler(verbose=False) as crawler:
-            r = await asyncio.wait_for(crawler.arun(url=url), timeout=timeout)
+            r = await crawler.arun(url=url)
         # r.markdown is a str subclass (StringCompatibleMarkdown) that Pydantic
         # serializes as {} because its real field is private. Pull the raw string
         # out and force a plain str so FastMCP serializes correctly.
@@ -288,8 +292,11 @@ async def _crawl4ai_fetch(url: str, timeout: int = 20) -> dict:
             or r.html
             or ""
         )
-        crawl_text = str(raw)
-    except Exception:
+        return str(raw)
+
+    try:
+        crawl_text = await asyncio.wait_for(_do_crawl(), timeout=timeout)
+    except (asyncio.TimeoutError, Exception):
         crawl_text = httpx_text  # retain whatever httpx managed to get
     finally:
         os.dup2(saved_fd, 1)

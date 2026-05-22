@@ -30,7 +30,7 @@ from schemas import Goal, Observation
 import events
 
 # Configuration
-MAX_ITERATIONS = 15  # Hard cap to prevent infinite loops
+MAX_ITERATIONS = 10  # Hard cap to prevent infinite loops
 DEFAULT_EXPECTED_ITERATIONS = 5  # Default expected iteration count
 
 # Query-specific expected iteration bounds
@@ -314,6 +314,19 @@ async def run(query: str, run_id: str | None = None) -> str:
                     "text": out.answer,
                 })
                 logger.info(f"[{run_id}] Answered goal {goal.id[:8]}")
+                # Eagerly mark this goal done in prior_goals so perception gets
+                # correct context on the next round (and we can exit early).
+                for g in prior_goals:
+                    if g.id == goal.id:
+                        g.done = True
+                        break
+                # Stop immediately if every goal is now satisfied — no need for
+                # another perception round-trip just to confirm we're done.
+                if prior_goals and all(g.done for g in prior_goals):
+                    logger.info(f"[{run_id}] All goals satisfied — early exit")
+                    console.print("[bold green][done][/bold green] all goals satisfied — early exit")
+                    events.emit(run_id, {"type": "complete"})
+                    break
                 continue
             
             # Action: execute tool call
