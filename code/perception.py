@@ -57,136 +57,39 @@ def observe(
     history_context = _format_history(history)
     prior_context = _format_prior_goals(prior_goals)
     
-    prompt = f"""You are the Perception Layer of an autonomous AI agent system.
+    prompt = f"""You are the Perception layer of an AI agent. Analyze the current state and produce a list of goals.
 
-    Your responsibility is to analyze the current execution state and determine the minimal set of goals required to answer the user's request.
+    ORIGINAL QUERY: {query}
 
-    You do NOT execute tools or solve the task itself.
-    You ONLY identify, track, and update goals.
-
-    ========================
-    ORIGINAL USER QUERY
-    ========================
-    {query}
-
-    ========================
-    MEMORY CONTEXT
-    ========================
-    Relevant stored memories, known facts, and prior validated outcomes:
-
+    MEMORY CONTEXT (relevant facts and prior tool outcomes):
     {memory_context or "(no relevant memories)"}
 
-    ========================
-    ACTION HISTORY
-    ========================
-    Actions already performed during the current run, including tool calls and outcomes:
-
+    ACTION HISTORY (what has been done this run):
     {history_context or "(no actions yet)"}
 
-    ========================
-    PRIOR GOALS
-    ========================
-    Previously generated goals and their completion states:
-
+    PRIOR GOALS:
     {prior_context or "(no prior goals)"}
 
-    ========================
-    OBJECTIVE
-    ========================
-    Determine what goals are necessary to fully answer the user query.
+    TASK:
+    1. Identify what goals are needed to answer the query
+    2. Mark goals as done=true if they have been completed (evidence exists in history or memory)
+    3. Keep goals focused and actionable
+    4. Typically 1-3 goals are sufficient
 
-    A goal should:
-    - Represent a single actionable objective
-    - Be short, concrete, and outcome-oriented
-    - Avoid implementation details
-    - Be phrased as an imperative action
+    IMPORTANT:
+    - A goal is done if the required information has been obtained
+    - If a tool has been called and the result is in history, that goal is likely done
+    - If facts needed are in memory, the goal may be done
+    - Always include at least one goal
+    - Goals should be short imperative phrases
 
-    Examples:
-    - "Find current weather in Chennai"
-    - "Summarize uploaded document"
-    - "Verify model accuracy metrics"
-
-    ========================
-    REASONING PROCESS
-    ========================
-    Before producing goals, reason step-by-step internally using this sequence:
-
-    1. Understand the user’s intent
-    2. Identify missing information required to answer
-    3. Check whether required information already exists in:
-    - memory context
-    - action history
-    - prior completed goals
-    4. Decide which goals are already complete
-    5. Determine the minimum remaining goals needed
-
-    ========================
-    GOAL COMPLETION RULES
-    ========================
-    Mark a goal as done=true ONLY if:
-    - The required information already exists in memory/history, OR
-    - A previous tool/action successfully produced the needed result, OR
-    - A prior goal already satisfies the requirement
-
-    Otherwise mark done=false.
-
-    Avoid duplicate or redundant goals.
-
-    ========================
-    REASONING TYPE TAGS
-    ========================
-    For each goal, identify the dominant reasoning type:
-
-    - "lookup" → retrieving information
-    - "analysis" → interpreting or comparing information
-    - "planning" → decomposing or sequencing tasks
-    - "verification" → validating correctness or consistency
-    - "generation" → producing new content
-    - "decision" → selecting among alternatives
-
-    ========================
-    SELF-CHECK REQUIREMENTS
-    ========================
-    Before finalizing:
-    - Ensure every goal directly supports answering the query
-    - Ensure no completed goals are incorrectly marked incomplete
-    - Ensure there are no duplicate goals
-    - Ensure goals are minimal (typically 1–3 goals)
-    - Ensure at least one goal exists
-
-    ========================
-    FAILURE / UNCERTAINTY HANDLING
-    ========================
-    If the available context is ambiguous or insufficient:
-    - Infer the most likely user intent conservatively
-    - Create exploratory goals when necessary
-    - Do NOT hallucinate completed work
-    - Prefer incomplete goals over falsely completed ones
-
-    ========================
-    OUTPUT FORMAT
-    ========================
-    Respond ONLY with valid JSON.
-
-    Schema:
-    {
-    "goals": [
-        {
-        "id": "goal_1",
-        "text": "Short imperative goal",
-        "done": true,
-        "reasoning_type": "lookup",
-        "evidence": "Found completed weather lookup in action history"
-        }
-    ]
-    }
-
-    Rules:
-    - Output must be machine-parseable JSON
-    - Do not include markdown
-    - Do not include explanations outside JSON
-    - Goal IDs must be unique
-    - Evidence should briefly justify the done state
+    Respond with JSON:
+    {{
+        "goals": [
+            {{"id": "...", "text": "...", "done": true/false}},
+            ...
+        ]
+    }}
     """
 
     try:

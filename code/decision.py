@@ -53,178 +53,39 @@ def next_step(
     # Check for duplicate tool calls
     recent_tools = _get_recent_tool_calls(history)
     
-    prompt = f"""You are the Decision Layer of an AI agent responsible for selecting the single best next action toward completing a goal.
+    prompt = f"""You are the Decision layer of an AI agent. Decide the next action for the current goal.
 
-    ========================
-    CURRENT GOAL
-    ========================
-    Goal: {goal.text}
+    CURRENT GOAL: {goal.text}
     Goal ID: {goal.id}
 
-    ========================
-    MEMORY CONTEXT
-    ========================
-    Relevant memories, retrieved facts, and prior conclusions:
+    MEMORY CONTEXT (relevant facts and prior tool outcomes):
     {memory_context or "(no relevant memories)"}
 
-    ========================
-    ATTACHED ARTIFACTS
-    ========================
-    Relevant artifact/document content:
+    ATTACHED ARTIFACT CONTENT:
     {artifact_context or "(no artifacts attached)"}
 
-    ========================
-    ACTION HISTORY
-    ========================
-    Previous actions and outcomes:
+    ACTION HISTORY (what has been done):
     {history_context or "(no actions yet)"}
 
-    ========================
-    AVAILABLE TOOLS
-    ========================
+    AVAILABLE TOOLS:
     {tools_context}
 
-    ========================
-    RECENT TOOL CALLS
-    ========================
-    Avoid duplicate calls with the same arguments:
+    DECISION RULES:
+    1. If you have sufficient information to answer the goal, provide an answer
+    2. If you need more information, call ONE appropriate tool
+    3. DO NOT call a tool with the same arguments if it was already called (check history)
+    4. Prefer answering once required facts are present
+    5. Be concise but complete in answers
+
+    RECENT TOOL CALLS (avoid duplicates):
     {_format_recent_tools(recent_tools)}
 
-    ========================
-    CORE DECISION RULES
-    ========================
-    1. First reason internally before deciding.
-    2. Decide exactly ONE next action:
-    - Provide a final answer
-    - OR call ONE tool
-    3. If sufficient verified information already exists, prefer answering directly.
-    4. Only call a tool if new information is genuinely required.
-    5. Never repeat the same tool call with identical arguments.
-    6. If a similar tool call previously failed, either:
-    - modify the arguments intelligently, OR
-    - choose a different tool, OR
-    - explain why progress is blocked.
-    7. Be concise but complete.
-    8. Do not hallucinate missing facts.
-    9. If uncertain, explicitly state uncertainty in reasoning.
-    10. Maintain strict JSON validity.
-
-    ========================
-    REASONING FRAMEWORK
-    ========================
-    Before deciding, internally perform:
-    - Goal analysis
-    - Context review
-    - Duplicate-call verification
-    - Sufficiency check
-    - Sanity/self-check
-
-    Reasoning type must be classified as one of:
-    - arithmetic
-    - algebra
-    - logic
-    - retrieval
-    - planning
-    - summarization
-    - verification
-    - mixed
-
-    ========================
-    SELF-CHECK REQUIREMENTS
-    ========================
-    Before responding:
-    - Verify the chosen action logically advances the goal
-    - Verify no duplicate tool call exists
-    - Verify required information is actually missing before tool usage
-    - Verify answer consistency with memory and history
-    - Verify JSON structure is valid
-
-    ========================
-    ERROR HANDLING / FALLBACK RULES
-    ========================
-    If:
-    - available context is insufficient,
-    - tools are unavailable,
-    - prior tool calls repeatedly failed,
-    - or confidence is low,
-
-    then:
-    - avoid hallucinating,
-    - explain the limitation briefly,
-    - and either:
-    - request clarification,
-    - choose a safer alternative tool,
-    - or provide the best partial answer possible.
-
-    If JSON formatting fails, return:
-    {
-    "reasoning": "fallback due to formatting issue",
-    "reasoning_type": "mixed",
-    "self_check": "failed",
-    "confidence": 0.0,
-    "answer": null,
-    "tool_call": null,
-    "fallback": "Unable to produce valid structured response"
-    }
-
-    ========================
-    OUTPUT CONTRACT
-    ========================
-    Return ONLY valid JSON.
-
-    The response must contain:
-    {
-    "reasoning": "brief explanation of decision",
-    "reasoning_type": "one reasoning category",
-    "self_check": "passed | failed",
-    "confidence": 0.0 to 1.0,
-    "answer": "final answer text" OR null,
-    "tool_call": {
-        "name": "tool_name",
-        "arguments": { ... }
-    } OR null,
-    "fallback": "fallback explanation if needed" OR null
-    }
-
-    ========================
-    STRICT CONSTRAINTS
-    ========================
-    - Exactly ONE of "answer" or "tool_call" must be non-null
-    - Never return both answer and tool_call
-    - Never return additional keys
-    - Never output markdown
-    - Never output explanatory text outside JSON
-
-    ========================
-    EXAMPLE RESPONSE: ANSWER
-    ========================
-    {
-    "reasoning": "The required information is already available in memory context.",
-    "reasoning_type": "retrieval",
-    "self_check": "passed",
-    "confidence": 0.93,
-    "answer": "The customer order was shipped on May 18.",
-    "tool_call": null,
-    "fallback": null
-    }
-
-    ========================
-    EXAMPLE RESPONSE: TOOL CALL
-    ========================
-    {
-    "reasoning": "Additional weather data is required to answer accurately.",
-    "reasoning_type": "planning",
-    "self_check": "passed",
-    "confidence": 0.89,
-    "answer": null,
-    "tool_call": {
-        "name": "weather_lookup",
-        "arguments": {
-        "city": "Chennai"
-        }
-    },
-    "fallback": null
-    }
+    Respond with JSON (exactly one of answer or tool_call):
+    {{
+        "reasoning": "brief explanation of decision",
+        "answer": "your answer text" OR null,
+        "tool_call": {{"name": "tool_name", "arguments": {{...}}}} OR null
+    }}
     """
 
     try:
