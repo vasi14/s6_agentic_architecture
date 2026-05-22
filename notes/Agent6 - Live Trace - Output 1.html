@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<!-- saved from url=(0022)http://localhost:8200/ -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+  <title>Agent6 · Live Trace</title>
+  <style>
+    :root {
+      --bg: #0d1117; --panel: #161b22; --border: #30363d; --text: #c9d1d9;
+      --muted: #8b949e; --green: #3fb950; --red: #f85149; --blue: #58a6ff;
+      --yellow: #d29922; --accent: #a371f7;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font: 14px -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    }
+
+    /* ── Header ──────────────────────────────────────────────────────── */
+    header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 { font-size: 18px; font-weight: 600; }
+    header nav a {
+      color: var(--blue); margin-left: 16px;
+      text-decoration: none; font-size: 13px;
+    }
+    header nav a:hover { text-decoration: underline; }
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 10px;
+      font-size: 11px; background: #21262d; color: var(--muted);
+    }
+
+    /* ── Main layout ─────────────────────────────────────────────────── */
+    main { padding: 20px; max-width: 920px; margin: 0 auto; }
+
+    /* ── Query form ──────────────────────────────────────────────────── */
+    .query-form {
+      display: flex; gap: 10px; align-items: flex-start; margin-bottom: 20px;
+    }
+    .query-form textarea {
+      flex: 1; min-height: 64px;
+      background: var(--panel); border: 1px solid var(--border);
+      color: var(--text); padding: 10px 12px; border-radius: 6px;
+      font: 14px -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      resize: vertical;
+    }
+    .query-form textarea:focus { outline: none; border-color: var(--blue); }
+    .query-form button {
+      background: var(--blue); border: none; color: #0d1117;
+      padding: 10px 22px; border-radius: 6px;
+      font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+    }
+    .query-form button:disabled { background: #21262d; color: var(--muted); cursor: not-allowed; }
+    .query-form button:hover:not(:disabled) { background: #79c0ff; }
+
+    /* ── Trace panel ─────────────────────────────────────────────────── */
+    .trace-panel {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 6px; overflow: hidden; margin-bottom: 16px;
+    }
+    .trace-panel-header {
+      padding: 9px 14px; border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 12px; color: var(--muted);
+    }
+    .run-id { font-family: ui-monospace, SFMono-Regular, monospace; color: var(--text); }
+    .trace-body { padding: 6px 0 10px; }
+
+    /* ── Iteration divider ───────────────────────────────────────────── */
+    .iter-divider {
+      padding: 8px 14px 3px;
+      font-size: 12px; font-weight: 600; font-family: ui-monospace, monospace;
+      color: #56d4dd; letter-spacing: 0.3px;
+      border-top: 1px solid var(--border); margin-top: 4px;
+    }
+    .iter-divider:first-child { border-top: none; margin-top: 0; }
+
+    /* ── Trace row ───────────────────────────────────────────────────── */
+    .trace-row {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 3px 14px; font-size: 13px; line-height: 1.55;
+    }
+    .trace-row:hover { background: rgba(255,255,255,0.025); }
+
+    /* ── Layer badges ────────────────────────────────────────────────── */
+    .layer-badge {
+      display: inline-block; padding: 1px 6px; border-radius: 3px;
+      font-size: 11px; font-weight: 600; white-space: nowrap; flex-shrink: 0;
+      font-family: ui-monospace, SFMono-Regular, monospace; margin-top: 2px;
+      min-width: 86px; text-align: center;
+    }
+    .badge-memory     { background: rgba(210,153,34,0.18);  color: var(--yellow); }
+    .badge-perception { background: rgba(163,113,247,0.18); color: var(--accent); }
+    .badge-decision   { background: rgba(88,166,255,0.18);  color: var(--blue);   }
+    .badge-action     { background: rgba(63,185,80,0.18);   color: var(--green);  }
+    .badge-attach     { background: rgba(139,148,158,0.12); color: var(--muted);  }
+    .badge-done       { background: rgba(63,185,80,0.18);   color: var(--green);  }
+
+    /* ── Trace content ───────────────────────────────────────────────── */
+    .trace-content { flex: 1; word-break: break-word; }
+    .muted    { color: var(--muted); }
+    .tool-name { color: var(--blue); font-weight: 600; }
+    .art-id   { font-family: ui-monospace, monospace; font-size: 12px; color: var(--accent); }
+
+    /* ── Goal chips (inline in perception row) ───────────────────────── */
+    .goals { display: flex; flex-wrap: wrap; gap: 5px; }
+    .goal-chip {
+      padding: 2px 8px; border-radius: 3px; font-size: 12px; line-height: 1.6;
+    }
+    .goal-open { background: rgba(88,166,255,0.12); color: var(--blue); }
+    .goal-done { background: rgba(139,148,158,0.1);  color: var(--muted); text-decoration: line-through; }
+
+    /* ── Spinner ─────────────────────────────────────────────────────── */
+    .spinner {
+      display: inline-block; width: 11px; height: 11px;
+      border: 2px solid var(--border); border-top-color: var(--blue);
+      border-radius: 50%; animation: spin 0.75s linear infinite;
+      margin-right: 5px; vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Status labels ───────────────────────────────────────────────── */
+    .status-running { color: var(--blue);  }
+    .status-done    { color: var(--green); }
+    .status-error   { color: var(--red);   }
+
+    /* ── Answer panel ────────────────────────────────────────────────── */
+    .answer-panel {
+      background: var(--panel);
+      border: 1px solid rgba(63,185,80,0.4);
+      border-radius: 6px; overflow: hidden;
+    }
+    .answer-header {
+      padding: 8px 14px;
+      background: rgba(63,185,80,0.07);
+      border-bottom: 1px solid rgba(63,185,80,0.25);
+      font-size: 12px; font-weight: 600; color: var(--green);
+    }
+    .answer-body {
+      padding: 16px; white-space: pre-wrap;
+      line-height: 1.75; font-size: 14px; color: var(--text);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ Agent6 <span class="badge">live trace</span></h1>
+  <nav>
+    <a href="http://localhost:8101/" target="_blank">LLM Gateway</a>
+    <a href="http://localhost:8101/help" target="_blank">Help</a>
+  </nav>
+</header>
+
+<main>
+  <!-- Query input -->
+  <div class="query-form">
+    <textarea id="query-input" rows="3" placeholder="Ask me anything… (Ctrl+Enter to run)
+
+e.g. Fetch https://en.wikipedia.org/wiki/Claude_Shannon and tell me his birth date, death date, and three key contributions."></textarea>
+    <button id="run-btn" onclick="startRun()">▶ Run</button>
+  </div>
+
+  <!-- Trace panel (hidden until a run starts) -->
+  <div id="trace-panel" class="trace-panel" style="display: block;">
+    <div class="trace-panel-header">
+      <span>Run: <span id="run-id-label" class="run-id">b46c28f0</span></span>
+      <span id="status-label"><span class="status-done">✓ complete</span></span>
+    </div>
+    <div id="trace-body" class="trace-body"><div class="iter-divider">─── iter 1 ───</div><div class="trace-row"><span class="layer-badge badge-memory">[memory]</span><span class="trace-content">10 hits&nbsp;<span class="muted">· Fetched Claude Shannon's birth date, death date, and three key contributions ...</span></span></div><div class="trace-row"><span class="layer-badge badge-perception">[perception]</span><span class="trace-content"><div class="goals"><span class="goal-chip goal-done">✓ Extract Claude Shannon's birth and death dates from memory.</span><span class="goal-chip goal-done">✓ Extract three key contributions to information theory from memory.</span><span class="goal-chip goal-open">○ Synthesize the gathered information into a final response for the user.</span></div></span></div><div class="trace-row"><span class="layer-badge badge-attach">[attach]</span><span class="trace-content"><span class="art-id">art:862e2dde0c9dc9d1</span>&nbsp;<span class="muted">· 3 KB attached</span></span></div><div class="trace-row"><span class="layer-badge badge-decision">[decision]</span><span class="trace-content">ANSWER:&nbsp;<span class="muted">Claude Shannon was born on April 30, 1916, and died on February 24, 2001. He made key contributions to information theory, including founding information theory, introducing the concept of bit as a...</span></span></div><div class="iter-divider">─── iter 2 ───</div><div class="trace-row"><span class="layer-badge badge-memory">[memory]</span><span class="trace-content">10 hits&nbsp;<span class="muted">· Claude Shannon was born on April 30, 1916, died on February 24, 2001, and mad...</span></span></div><div class="trace-row"><span class="layer-badge badge-perception">[perception]</span><span class="trace-content"><div class="goals"><span class="goal-chip goal-open">○ Synthesize the birth date, death date, and three key contributions of Claude Shannon into a final response.</span></div></span></div><div class="trace-row"><span class="layer-badge badge-attach">[attach]</span><span class="trace-content"><span class="art-id">art:862e2dde0c9dc9d1</span>&nbsp;<span class="muted">· 3 KB attached</span></span></div><div class="trace-row"><span class="layer-badge badge-decision">[decision]</span><span class="trace-content">ANSWER:&nbsp;<span class="muted">Claude Shannon was born on April 30, 1916, and passed away on February 24, 2001. His three key contributions to information theory include: 1) Founding the field of information theory with his semi...</span></span></div><div class="iter-divider">─── iter 3 ───</div><div class="trace-row"><span class="layer-badge badge-memory">[memory]</span><span class="trace-content">10 hits&nbsp;<span class="muted">· Claude Shannon was born on April 30, 1916, died on February 24, 2001, and mad...</span></span></div><div class="trace-row"><span class="layer-badge badge-perception">[perception]</span><span class="trace-content"><div class="goals"><span class="goal-chip goal-done">✓ Synthesize the birth date, death date, and three key contributions of Claude Shannon into a final response.</span></div></span></div><div class="trace-row"><span class="layer-badge badge-done">[done]</span><span class="trace-content">all goals satisfied</span></div></div>
+  </div>
+
+  <!-- Final answer (hidden until done) -->
+  <div id="answer-panel" class="answer-panel" style="display: block;">
+    <div class="answer-header">✓ &nbsp;Final Answer</div>
+    <div id="answer-body" class="answer-body">Claude Shannon was born on April 30, 1916, and died on February 24, 2001. He made key contributions to information theory, including founding information theory, introducing the concept of bit as a unit of information, and developing the Shannon entropy formula.
+
+Claude Shannon was born on April 30, 1916, and passed away on February 24, 2001. His three key contributions to information theory include: 1) Founding the field of information theory with his seminal 1948 paper, 'A Mathematical Theory of Communication'; 2) Introducing the 'bit' as the fundamental unit of information; and 3) Developing the Shannon entropy formula, which measures the uncertainty or information content in a data source.</div>
+  </div>
+</main>
+
+<script>
+/* ── Helpers ──────────────────────────────────────────────────────────── */
+function esc(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function tb() { return document.getElementById('trace-body'); }
+
+function addIterDivider(iter) {
+  const d = document.createElement('div');
+  d.className = 'iter-divider';
+  d.textContent = `─── iter ${iter} ───`;
+  tb().appendChild(d);
+}
+
+function addRow(badgeClass, badgeText, contentHtml) {
+  const row = document.createElement('div');
+  row.className = 'trace-row';
+  row.innerHTML =
+    `<span class="layer-badge ${badgeClass}">${esc(badgeText)}</span>` +
+    `<span class="trace-content">${contentHtml}</span>`;
+  tb().appendChild(row);
+  row.scrollIntoView({ block: 'nearest' });
+}
+
+function renderGoals(goals) {
+  return (goals || []).map(g => {
+    const cls = g.done ? 'goal-chip goal-done' : 'goal-chip goal-open';
+    const icon = g.done ? '✓' : '○';
+    return `<span class="${cls}">${icon} ${esc(g.text)}</span>`;
+  }).join('');
+}
+
+/* ── Event dispatcher ─────────────────────────────────────────────────── */
+function handleEvent(ev) {
+  switch (ev.type) {
+
+    case 'start':
+      document.getElementById('run-id-label').textContent = ev.run_id;
+      document.getElementById('status-label').innerHTML =
+        '<span class="spinner"></span><span class="status-running">running…</span>';
+      break;
+
+    case 'iter_start':
+      addIterDivider(ev.iter);
+      break;
+
+    case 'memory': {
+      let c = `${ev.hits} hit${ev.hits !== 1 ? 's' : ''}`;
+      if (ev.preview) c += `&nbsp;<span class="muted">· ${esc(ev.preview)}</span>`;
+      addRow('badge-memory', '[memory]', c);
+      break;
+    }
+
+    case 'perception': {
+      if (!ev.goals?.length) break;
+      addRow('badge-perception', '[perception]',
+        `<div class="goals">${renderGoals(ev.goals)}</div>`);
+      break;
+    }
+
+    case 'attach': {
+      const kb = (ev.bytes / 1024).toFixed(0);
+      addRow('badge-attach', '[attach]',
+        `<span class="art-id">${esc(ev.artifact_id)}</span>&nbsp;` +
+        `<span class="muted">· ${kb} KB attached</span>`);
+      break;
+    }
+
+    case 'decision_tool': {
+      const args = ev.args_preview
+        ? `<span class="muted">(${esc(ev.args_preview)})</span>` : '';
+      addRow('badge-decision', '[decision]',
+        `TOOL_CALL:&nbsp;<span class="tool-name">${esc(ev.tool)}</span>&nbsp;${args}`);
+      break;
+    }
+
+    case 'decision_answer':
+      addRow('badge-decision', '[decision]',
+        `ANSWER:&nbsp;<span class="muted">${esc(ev.preview)}</span>`);
+      break;
+
+    case 'action': {
+      let c = '';
+      if (ev.artifact_id) {
+        c = `→&nbsp;<span class="art-id">[${esc(ev.artifact_id)}]</span>&nbsp;`;
+      } else {
+        c = '→&nbsp;';
+      }
+      c += `<span class="muted">${esc(ev.preview)}</span>`;
+      addRow('badge-action', '[action]', c);
+      break;
+    }
+
+    case 'complete':
+      addRow('badge-done', '[done]', 'all goals satisfied');
+      break;
+
+    case 'done': {
+      document.getElementById('status-label').innerHTML =
+        '<span class="status-done">✓ complete</span>';
+      document.getElementById('run-btn').disabled = false;
+      document.getElementById('run-btn').textContent = '▶ Run';
+
+      const ap = document.getElementById('answer-panel');
+      document.getElementById('answer-body').textContent = ev.answer || '(no answer)';
+      ap.style.display = 'block';
+      ap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      if (window._src) { window._src.close(); window._src = null; }
+      break;
+    }
+
+    case 'error':
+      document.getElementById('status-label').innerHTML =
+        `<span class="status-error">✗ ${esc(ev.message || 'error')}</span>`;
+      document.getElementById('run-btn').disabled = false;
+      document.getElementById('run-btn').textContent = '▶ Run';
+      if (window._src) { window._src.close(); window._src = null; }
+      break;
+  }
+}
+
+/* ── Run trigger ──────────────────────────────────────────────────────── */
+async function startRun() {
+  const query = document.getElementById('query-input').value.trim();
+  if (!query) return;
+
+  // Reset UI
+  document.getElementById('run-btn').disabled = true;
+  document.getElementById('run-btn').textContent = '⏳';
+  tb().innerHTML = '';
+  document.getElementById('answer-panel').style.display = 'none';
+  document.getElementById('answer-body').textContent = '';
+  document.getElementById('trace-panel').style.display = 'block';
+  document.getElementById('run-id-label').textContent = '…';
+  document.getElementById('status-label').innerHTML =
+    '<span class="spinner"></span><span class="status-running">connecting…</span>';
+
+  if (window._src) { window._src.close(); window._src = null; }
+
+  // POST /run
+  let runId;
+  try {
+    const res = await fetch('/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+    runId = (await res.json()).run_id;
+  } catch (e) {
+    document.getElementById('status-label').innerHTML =
+      `<span class="status-error">✗ failed to start: ${esc(e.message)}</span>`;
+    document.getElementById('run-btn').disabled = false;
+    document.getElementById('run-btn').textContent = '▶ Run';
+    return;
+  }
+
+  // Open SSE stream
+  const src = new EventSource(`/run/${runId}/stream`);
+  window._src = src;
+
+  src.onmessage = (e) => {
+    try { handleEvent(JSON.parse(e.data)); }
+    catch (err) { console.error('SSE parse error:', err, e.data); }
+  };
+
+  src.onerror = () => {
+    // Only show error if we haven't already completed cleanly
+    if (window._src) {
+      document.getElementById('status-label').innerHTML =
+        '<span class="status-error">✗ stream disconnected</span>';
+      document.getElementById('run-btn').disabled = false;
+      document.getElementById('run-btn').textContent = '▶ Run';
+      src.close(); window._src = null;
+    }
+  };
+}
+
+// Ctrl+Enter / Cmd+Enter submits
+document.getElementById('query-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) startRun();
+});
+</script>
+
+
+</body></html>

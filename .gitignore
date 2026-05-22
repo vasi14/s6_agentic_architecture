@@ -1,0 +1,54 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Environment files
+.env
+.env.*
+
+# Runtime state and generated artifacts
+state/
+state/**
+runs/
+runs/**
+
+# Local editor/project files
+.vscode/
+.idea/
+__MACOSX/
+
+# Caches, test outputs, and coverage
+.pytest_cache/
+.mypy_cache/
+.cache
+.coverage
+coverage.*
+
+# Logs
+*.log
+
+# Databases
+*.db
+*.sqlite3
+
+# Secrets / keys
+*.pem
+*.key
+*.crt
+credentials.json
+token.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+

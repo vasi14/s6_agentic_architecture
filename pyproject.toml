@@ -1,0 +1,21 @@
+[project]
+name = "s6-agentic-architecture"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "crawl4ai>=0.8.6",
+    "ddgs>=9.14.4",
+    "fastapi>=0.136.1",
+    "fastmcp>=3.3.1",
+    "httpx>=0.28.1",
+    "jsonschema>=4.26.0",
+    "mcp[cli]>=1.27.1",
+    "pydantic>=2.13.4",
+    "python-dotenv>=1.2.2",
+    "rich>=15.0.0",
+    "tavily>=1.1.0",
+    "tzdata>=2026.2",
+    "uvicorn>=0.47.0",
+]

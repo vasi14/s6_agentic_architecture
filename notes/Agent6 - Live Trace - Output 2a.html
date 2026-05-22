@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<!-- saved from url=(0022)http://localhost:8200/ -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+  <title>Agent6 · Live Trace</title>
+  <style>
+    :root {
+      --bg: #0d1117; --panel: #161b22; --border: #30363d; --text: #c9d1d9;
+      --muted: #8b949e; --green: #3fb950; --red: #f85149; --blue: #58a6ff;
+      --yellow: #d29922; --accent: #a371f7;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font: 14px -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    }
+
+    /* ── Header ──────────────────────────────────────────────────────── */
+    header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 { font-size: 18px; font-weight: 600; }
+    header nav a {
+      color: var(--blue); margin-left: 16px;
+      text-decoration: none; font-size: 13px;
+    }
+    header nav a:hover { text-decoration: underline; }
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 10px;
+      font-size: 11px; background: #21262d; color: var(--muted);
+    }
+
+    /* ── Main layout ─────────────────────────────────────────────────── */
+    main { padding: 20px; max-width: 920px; margin: 0 auto; }
+
+    /* ── Query form ──────────────────────────────────────────────────── */
+    .query-form {
+      display: flex; gap: 10px; align-items: flex-start; margin-bottom: 20px;
+    }
+    .query-form textarea {
+      flex: 1; min-height: 64px;
+      background: var(--panel); border: 1px solid var(--border);
+      color: var(--text); padding: 10px 12px; border-radius: 6px;
+      font: 14px -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      resize: vertical;
+    }
+    .query-form textarea:focus { outline: none; border-color: var(--blue); }
+    .query-form button {
+      background: var(--blue); border: none; color: #0d1117;
+      padding: 10px 22px; border-radius: 6px;
+      font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+    }
+    .query-form button:disabled { background: #21262d; color: var(--muted); cursor: not-allowed; }
+    .query-form button:hover:not(:disabled) { background: #79c0ff; }
+
+    /* ── Trace panel ─────────────────────────────────────────────────── */
+    .trace-panel {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 6px; overflow: hidden; margin-bottom: 16px;
+    }
+    .trace-panel-header {
+      padding: 9px 14px; border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 12px; color: var(--muted);
+    }
+    .run-id { font-family: ui-monospace, SFMono-Regular, monospace; color: var(--text); }
+    .trace-body { padding: 6px 0 10px; }
+
+    /* ── Iteration divider ───────────────────────────────────────────── */
+    .iter-divider {
+      padding: 8px 14px 3px;
+      font-size: 12px; font-weight: 600; font-family: ui-monospace, monospace;
+      color: #56d4dd; letter-spacing: 0.3px;
+      border-top: 1px solid var(--border); margin-top: 4px;
+    }
+    .iter-divider:first-child { border-top: none; margin-top: 0; }
+
+    /* ── Trace row ───────────────────────────────────────────────────── */
+    .trace-row {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 3px 14px; font-size: 13px; line-height: 1.55;
+    }
+    .trace-row:hover { background: rgba(255,255,255,0.025); }
+
+    /* ── Layer badges ────────────────────────────────────────────────── */
+    .layer-badge {
+      display: inline-block; padding: 1px 6px; border-radius: 3px;
+      font-size: 11px; font-weight: 600; white-space: nowrap; flex-shrink: 0;
+      font-family: ui-monospace, SFMono-Regular, monospace; margin-top: 2px;
+      min-width: 86px; text-align: center;
+    }
+    .badge-memory     { background: rgba(210,153,34,0.18);  color: var(--yellow); }
+    .badge-perception { background: rgba(163,113,247,0.18); color: var(--accent); }
+    .badge-decision   { background: rgba(88,166,255,0.18);  color: var(--blue);   }
+    .badge-action     { background: rgba(63,185,80,0.18);   color: var(--green);  }
+    .badge-attach     { background: rgba(139,148,158,0.12); color: var(--muted);  }
+    .badge-done       { background: rgba(63,185,80,0.18);   color: var(--green);  }
+
+    /* ── Trace content ───────────────────────────────────────────────── */
+    .trace-content { flex: 1; word-break: break-word; }
+    .muted    { color: var(--muted); }
+    .tool-name { color: var(--blue); font-weight: 600; }
+    .art-id   { font-family: ui-monospace, monospace; font-size: 12px; color: var(--accent); }
+
+    /* ── Goal chips (inline in perception row) ───────────────────────── */
+    .goals { display: flex; flex-wrap: wrap; gap: 5px; }
+    .goal-chip {
+      padding: 2px 8px; border-radius: 3px; font-size: 12px; line-height: 1.6;
+    }
+    .goal-open { background: rgba(88,166,255,0.12); color: var(--blue); }
+    .goal-done { background: rgba(139,148,158,0.1);  color: var(--muted); text-decoration: line-through; }
+
+    /* ── Spinner ─────────────────────────────────────────────────────── */
+    .spinner {
+      display: inline-block; width: 11px; height: 11px;
+      border: 2px solid var(--border); border-top-color: var(--blue);
+      border-radius: 50%; animation: spin 0.75s linear infinite;
+      margin-right: 5px; vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Status labels ───────────────────────────────────────────────── */
+    .status-running { color: var(--blue);  }
+    .status-done    { color: var(--green); }
+    .status-error   { color: var(--red);   }
+
+    /* ── Answer panel ────────────────────────────────────────────────── */
+    .answer-panel {
+      background: var(--panel);
+      border: 1px solid rgba(63,185,80,0.4);
+      border-radius: 6px; overflow: hidden;
+    }
+    .answer-header {
+      padding: 8px 14px;
+      background: rgba(63,185,80,0.07);
+      border-bottom: 1px solid rgba(63,185,80,0.25);
+      font-size: 12px; font-weight: 600; color: var(--green);
+    }
+    .answer-body {
+      padding: 16px; white-space: pre-wrap;
+      line-height: 1.75; font-size: 14px; color: var(--text);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ Agent6 <span class="badge">live trace</span></h1>
+  <nav>
+    <a href="http://localhost:8101/" target="_blank">LLM Gateway</a>
+    <a href="http://localhost:8101/help" target="_blank">Help</a>
+  </nav>
+</header>
+
+<main>
+  <!-- Query input -->
+  <div class="query-form">
+    <textarea id="query-input" rows="3" placeholder="Ask me anything… (Ctrl+Enter to run)
+
+e.g. Fetch https://en.wikipedia.org/wiki/Claude_Shannon and tell me his birth date, death date, and three key contributions."></textarea>
+    <button id="run-btn" onclick="startRun()">▶ Run</button>
+  </div>
+
+  <!-- Trace panel (hidden until a run starts) -->
+  <div id="trace-panel" class="trace-panel" style="display: block;">
+    <div class="trace-panel-header">
+      <span>Run: <span id="run-id-label" class="run-id">1a844378</span></span>
+      <span id="status-label"><span class="status-done">✓ complete</span></span>
+    </div>
+    <div id="trace-body" class="trace-body"><div class="iter-divider">─── iter 1 ───</div><div class="trace-row"><span class="layer-badge badge-memory">[memory]</span><span class="trace-content">10 hits&nbsp;<span class="muted">· Request to find 3 family-friendly activities in Paris this weekend and check ...</span></span></div><div class="trace-row"><span class="layer-badge badge-perception">[perception]</span><span class="trace-content"><div class="goals"><span class="goal-chip goal-done">✓ Extract 3 family-friendly activities in Paris from the memory context.</span><span class="goal-chip goal-done">✓ Retrieve the Sunday weather forecast for Paris from the memory context.</span><span class="goal-chip goal-open">○ Synthesize the activities and weather data to recommend the most appropriate activity for Sunday.</span></div></span></div><div class="trace-row"><span class="layer-badge badge-attach">[attach]</span><span class="trace-content"><span class="art-id">art:e88d374058b15294</span>&nbsp;<span class="muted">· 3 KB attached</span></span></div><div class="trace-row"><span class="layer-badge badge-decision">[decision]</span><span class="trace-content">TOOL_CALL:&nbsp;<span class="tool-name">web_search</span>&nbsp;<span class="muted">({"query": "weather forecast Paris Sunday March 29 2026"})</span></span></div><div class="trace-row"><span class="layer-badge badge-action">[action]</span><span class="trace-content">→&nbsp;<span class="art-id">[art:c94b8ac04a3690a8]</span>&nbsp;<span class="muted">Found 5 results: March - Paris, Ville de Paris, France Mo, 2026 - Paris, Ville de Paris, France Mon, Monthly Weather Forecast for Paris, Fran</span></span></div><div class="iter-divider">─── iter 2 ───</div><div class="trace-row"><span class="layer-badge badge-memory">[memory]</span><span class="trace-content">10 hits&nbsp;<span class="muted">· Request to find 3 family-friendly activities in Paris this weekend and check ...</span></span></div><div class="trace-row"><span class="layer-badge badge-perception">[perception]</span><span class="trace-content"><div class="goals"><span class="goal-chip goal-done">✓ Extract 3 family-friendly activities in Paris from the search results in memory.</span><span class="goal-chip goal-done">✓ Extract the Sunday weather forecast for Paris from the search results in memory.</span><span class="goal-chip goal-open">○ Synthesize the activities and weather data to recommend the most appropriate activity for Sunday.</span></div></span></div><div class="trace-row"><span class="layer-badge badge-attach">[attach]</span><span class="trace-content"><span class="art-id">art:c94b8ac04a3690a8</span>&nbsp;<span class="muted">· 2 KB attached</span></span></div><div class="trace-row"><span class="layer-badge badge-decision">[decision]</span><span class="trace-content">ANSWER:&nbsp;<span class="muted">For your Sunday in Paris (March 29, 2026), here are three family-friendly recommendations: 1. **Jardin du Luxembourg**: A classic choice with a famous playground, pony rides, and the iconic toy sai...</span></span></div><div class="iter-divider">─── iter 3 ───</div><div class="trace-row"><span class="layer-badge badge-memory">[memory]</span><span class="trace-content">10 hits&nbsp;<span class="muted">· Request to find 3 family-friendly activities in Paris this weekend and check ...</span></span></div><div class="trace-row"><span class="layer-badge badge-perception">[perception]</span><span class="trace-content"><div class="goals"><span class="goal-chip goal-open">○ Synthesize the Paris family-friendly activities and Sunday weather data to provide a final recommendation.</span></div></span></div><div class="trace-row"><span class="layer-badge badge-attach">[attach]</span><span class="trace-content"><span class="art-id">art:c94b8ac04a3690a8</span>&nbsp;<span class="muted">· 2 KB attached</span></span></div><div class="trace-row"><span class="layer-badge badge-decision">[decision]</span><span class="trace-content">ANSWER:&nbsp;<span class="muted">For your Sunday in Paris (March 29, 2026), here are three family-friendly recommendations based on the typical March weather (which can be cool and occasionally rainy, so indoor/outdoor flexibility...</span></span></div><div class="iter-divider">─── iter 4 ───</div><div class="trace-row"><span class="layer-badge badge-memory">[memory]</span><span class="trace-content">10 hits&nbsp;<span class="muted">· Request to find 3 family-friendly activities in Paris this weekend and check ...</span></span></div><div class="trace-row"><span class="layer-badge badge-perception">[perception]</span><span class="trace-content"><div class="goals"><span class="goal-chip goal-open">○ Synthesize the Paris family-friendly activities and Sunday weather data to provide a final recommendation.</span></div></span></div><div class="trace-row"><span class="layer-badge badge-attach">[attach]</span><span class="trace-content"><span class="art-id">art:c94b8ac04a3690a8</span>&nbsp;<span class="muted">· 2 KB attached</span></span></div><div class="trace-row"><span class="layer-badge badge-decision">[decision]</span><span class="trace-content">ANSWER:&nbsp;<span class="muted">For your Sunday in Paris (March 29, 2026), here are three family-friendly recommendations: 1. **Jardin du Luxembourg**: A classic choice for families. It features a large playground, a puppet theat...</span></span></div><div class="iter-divider">─── iter 5 ───</div><div class="trace-row"><span class="layer-badge badge-memory">[memory]</span><span class="trace-content">10 hits&nbsp;<span class="muted">· Request to find 3 family-friendly activities in Paris this weekend and check ...</span></span></div><div class="trace-row"><span class="layer-badge badge-perception">[perception]</span><span class="trace-content"><div class="goals"><span class="goal-chip goal-done">✓ Extract 3 family-friendly activities in Paris from the search results.</span><span class="goal-chip goal-done">✓ Determine Sunday's weather in Paris from the retrieved forecast data.</span><span class="goal-chip goal-open">○ Synthesize the activities and weather data to provide a final recommendation to the user.</span></div></span></div><div class="trace-row"><span class="layer-badge badge-attach">[attach]</span><span class="trace-content"><span class="art-id">art:c94b8ac04a3690a8</span>&nbsp;<span class="muted">· 2 KB attached</span></span></div><div class="trace-row"><span class="layer-badge badge-decision">[decision]</span><span class="trace-content">ANSWER:&nbsp;<span class="muted">For your Sunday in Paris (March 29, 2026), here are three family-friendly recommendations: 1. **Jardin du Luxembourg**: A classic choice for families, offering a large playground, puppet shows, and...</span></span></div><div class="iter-divider">─── iter 6 ───</div><div class="trace-row"><span class="layer-badge badge-memory">[memory]</span><span class="trace-content">10 hits&nbsp;<span class="muted">· Request to find 3 family-friendly activities in Paris this weekend and check ...</span></span></div><div class="trace-row"><span class="layer-badge badge-perception">[perception]</span><span class="trace-content"><div class="goals"><span class="goal-chip goal-done">✓ Extract 3 family-friendly activities in Paris from the search results.</span><span class="goal-chip goal-done">✓ Determine Sunday's weather in Paris from the retrieved forecast data.</span><span class="goal-chip goal-open">○ Synthesize the activities and weather data to provide a final recommendation to the user.</span></div></span></div><div class="trace-row"><span class="layer-badge badge-attach">[attach]</span><span class="trace-content"><span class="art-id">art:c94b8ac04a3690a8</span>&nbsp;<span class="muted">· 2 KB attached</span></span></div><div class="trace-row"><span class="layer-badge badge-decision">[decision]</span><span class="trace-content">ANSWER:&nbsp;<span class="muted">For your Sunday in Paris (March 29, 2026), here are three family-friendly recommendations: 1. **Jardin du Luxembourg**: A classic choice for families, offering a large playground, puppet shows, and...</span></span></div><div class="iter-divider">─── iter 7 ───</div><div class="trace-row"><span class="layer-badge badge-memory">[memory]</span><span class="trace-content">10 hits&nbsp;<span class="muted">· Request to find 3 family-friendly activities in Paris this weekend and check ...</span></span></div><div class="trace-row"><span class="layer-badge badge-perception">[perception]</span><span class="trace-content"><div class="goals"><span class="goal-chip goal-done">✓ Extract 3 family-friendly activities in Paris from the search results.</span><span class="goal-chip goal-done">✓ Determine Sunday's weather in Paris from the retrieved forecast data.</span><span class="goal-chip goal-open">○ Synthesize the activities and weather data to provide a final recommendation to the user.</span></div></span></div><div class="trace-row"><span class="layer-badge badge-attach">[attach]</span><span class="trace-content"><span class="art-id">art:c94b8ac04a3690a8</span>&nbsp;<span class="muted">· 2 KB attached</span></span></div><div class="trace-row"><span class="layer-badge badge-decision">[decision]</span><span class="trace-content">ANSWER:&nbsp;<span class="muted">For your Sunday in Paris (March 29, 2026), here are three family-friendly recommendations: 1. **Jardin du Luxembourg**: A classic choice with a beautiful playground, puppet shows, and space for kid...</span></span></div><div class="iter-divider">─── iter 8 ───</div><div class="trace-row"><span class="layer-badge badge-memory">[memory]</span><span class="trace-content">10 hits&nbsp;<span class="muted">· Request to find 3 family-friendly activities in Paris this weekend and check ...</span></span></div><div class="trace-row"><span class="layer-badge badge-perception">[perception]</span><span class="trace-content"><div class="goals"><span class="goal-chip goal-done">✓ Extract 3 family-friendly activities in Paris from the search results.</span><span class="goal-chip goal-done">✓ Determine Sunday's weather in Paris from the retrieved forecast data.</span><span class="goal-chip goal-open">○ Synthesize the activities and weather data to provide a final recommendation to the user.</span></div></span></div><div class="trace-row"><span class="layer-badge badge-attach">[attach]</span><span class="trace-content"><span class="art-id">art:c94b8ac04a3690a8</span>&nbsp;<span class="muted">· 2 KB attached</span></span></div><div class="trace-row"><span class="layer-badge badge-decision">[decision]</span><span class="trace-content">ANSWER:&nbsp;<span class="muted">For your Sunday in Paris (March 29, 2026), here are three family-friendly recommendations: 1. **Jardin du Luxembourg**: A classic choice with a beautiful playground, puppet shows, and space for kid...</span></span></div><div class="iter-divider">─── iter 9 ───</div><div class="trace-row"><span class="layer-badge badge-memory">[memory]</span><span class="trace-content">10 hits&nbsp;<span class="muted">· Request to find 3 family-friendly activities in Paris this weekend and check ...</span></span></div><div class="trace-row"><span class="layer-badge badge-perception">[perception]</span><span class="trace-content"><div class="goals"><span class="goal-chip goal-done">✓ Extract 3 family-friendly activities in Paris from the search results.</span><span class="goal-chip goal-done">✓ Determine Sunday's weather in Paris from the retrieved forecast data.</span><span class="goal-chip goal-open">○ Synthesize the activities and weather data to provide a final recommendation to the user.</span></div></span></div><div class="trace-row"><span class="layer-badge badge-attach">[attach]</span><span class="trace-content"><span class="art-id">art:c94b8ac04a3690a8</span>&nbsp;<span class="muted">· 2 KB attached</span></span></div><div class="trace-row"><span class="layer-badge badge-decision">[decision]</span><span class="trace-content">ANSWER:&nbsp;<span class="muted">For your Sunday in Paris (March 29, 2026), here are three family-friendly recommendations: 1. **Jardin du Luxembourg**: A classic choice for families, featuring a large playground, pony rides, and ...</span></span></div><div class="iter-divider">─── iter 10 ───</div><div class="trace-row"><span class="layer-badge badge-memory">[memory]</span><span class="trace-content">10 hits&nbsp;<span class="muted">· Request to find 3 family-friendly activities in Paris this weekend and check ...</span></span></div><div class="trace-row"><span class="layer-badge badge-perception">[perception]</span><span class="trace-content"><div class="goals"><span class="goal-chip goal-done">✓ Extract 3 family-friendly activities in Paris from the search results.</span><span class="goal-chip goal-done">✓ Determine Sunday's weather in Paris from the retrieved forecast data.</span><span class="goal-chip goal-open">○ Synthesize the activities and weather data to provide a final recommendation to the user.</span></div></span></div><div class="trace-row"><span class="layer-badge badge-attach">[attach]</span><span class="trace-content"><span class="art-id">art:c94b8ac04a3690a8</span>&nbsp;<span class="muted">· 2 KB attached</span></span></div><div class="trace-row"><span class="layer-badge badge-decision">[decision]</span><span class="trace-content">ANSWER:&nbsp;<span class="muted">For your Sunday in Paris (March 29, 2026), here are three family-friendly recommendations: 1. **Jardin du Luxembourg**: A classic choice with a large playground, pony rides, and the famous puppet t...</span></span></div><div class="iter-divider">─── iter 11 ───</div></div>
+  </div>
+
+  <!-- Final answer (hidden until done) -->
+  <div id="answer-panel" class="answer-panel" style="display: block;">
+    <div class="answer-header">✓ &nbsp;Final Answer</div>
+    <div id="answer-body" class="answer-body">For your Sunday in Paris (March 29, 2026), here are three family-friendly recommendations:
+
+1. **Jardin du Luxembourg**: A classic choice with a famous playground, pony rides, and the iconic toy sailboat pond. It is perfect for a pleasant spring day.
+2. **Cité des Sciences et de l'Industrie**: Located in Parc de la Villette, this is an excellent indoor science museum with dedicated areas for children (Cité des Enfants), making it the best choice if the weather is cool or rainy.
+3. **The Jardin d'Acclimatation**: An amusement park with rides, animals, and gardens that is highly popular with local families.
+
+**Weather Context &amp; Recommendation:**
+March 29, 2026, marks the start of Daylight Saving Time in Paris. While early spring weather in Paris can be unpredictable, it is typically cool with a mix of sun and clouds. 
+
+**Recommendation:** If the weather is mild, **Jardin du Luxembourg** is the most appropriate choice to enjoy the spring atmosphere. If the forecast indicates rain or chilly temperatures, the **Cité des Sciences et de l'Industrie** is the most appropriate indoor alternative to ensure a fun day for the whole family.
+
+For your Sunday in Paris (March 29, 2026), here are three family-friendly recommendations based on the typical March weather (which can be cool and occasionally rainy, so indoor/outdoor flexibility is key):
+
+1. **The Jardin du Luxembourg**: A classic choice for families. It features a famous puppet theater (Théâtre des Marionnettes), a large playground, and vintage carousel. It is perfect if the weather is mild.
+2. **Cité des Sciences et de l'Industrie**: Located in Parc de la Villette, this is Europe's largest science museum. It is an excellent indoor option if the weather is rainy or chilly, featuring the 'Cité des Enfants' specifically designed for kids.
+3. **Muséum National d'Histoire Naturelle (Jardin des Plantes)**: The Grande Galerie de l'Évolution is visually stunning for children of all ages. The surrounding gardens are also lovely for a walk if the sun is out.
+
+**Recommendation:** Given that March weather in Paris can be unpredictable, **Cité des Sciences et de l'Industrie** is the most appropriate choice. It provides a high-quality, engaging experience that is entirely weather-proof, ensuring your family has a great day regardless of the forecast.
+
+For your Sunday in Paris (March 29, 2026), here are three family-friendly recommendations:
+
+1. **Jardin du Luxembourg**: A classic choice for families. It features a large playground, a puppet theater (Théâtre des Marionnettes), and the iconic pond where children can sail vintage wooden boats. It is perfect if the weather is mild.
+2. **Cité des Sciences et de l'Industrie**: Located in Parc de la Villette, this is Europe's largest science museum. It is an excellent indoor option if the weather turns rainy or chilly, offering interactive exhibits specifically designed for children (Cité des Enfants).
+3. **Grande Galerie de l'Évolution (Natural History Museum)**: Located in the Jardin des Plantes, this museum is visually stunning and highly engaging for kids of all ages. The Jardin des Plantes itself also houses a small zoo (Ménagerie) and beautiful botanical gardens.
+
+**Recommendation:** Given that March weather in Paris can be unpredictable with occasional showers, I recommend the **Cité des Sciences et de l'Industrie** as the most appropriate choice. It provides a high-quality, weather-proof experience that ensures your family day remains enjoyable regardless of the forecast.
+
+For your Sunday in Paris (March 29, 2026), here are three family-friendly recommendations:
+
+1. **Jardin du Luxembourg**: A classic choice for families, offering a large playground, puppet shows, and space for children to run. It is best enjoyed if the weather is mild.
+2. **Cité des Sciences et de l'Industrie**: Located at Parc de la Villette, this is an excellent indoor science museum with dedicated areas for children (Cité des Enfants), making it the most appropriate choice if the weather is rainy or chilly.
+3. **Muséum National d'Histoire Naturelle (Jardin des Plantes)**: The Gallery of Evolution is captivating for all ages and provides a great indoor experience.
+
+**Recommendation:** Given that March weather in Paris can be unpredictable and often cool or rainy, the **Cité des Sciences et de l'Industrie** is the most appropriate choice for Sunday, as it offers a high-quality, weather-proof indoor experience for the whole family.
+
+For your Sunday in Paris (March 29, 2026), here are three family-friendly recommendations:
+
+1. **Jardin du Luxembourg**: A classic choice for families, offering a large playground, puppet shows, and space for children to sail toy boats in the pond. It is best enjoyed if the weather is mild.
+2. **Cité des Sciences et de l'Industrie**: Located at Parc de la Villette, this is a fantastic indoor science museum with dedicated areas for children (Cité des Enfants), making it the perfect choice if the weather is rainy or chilly.
+3. **Muséum National d'Histoire Naturelle (Jardin des Plantes)**: The Grande Galerie de l'Évolution is visually stunning for all ages and provides an excellent indoor activity.
+
+**Recommendation:** Given that March weather in Paris can be unpredictable and often cool or rainy, the **Cité des Sciences et de l'Industrie** is the most appropriate choice for Sunday, March 29, as it offers a high-quality, weather-proof experience that ensures your family plans won't be disrupted by the elements.
+
+For your Sunday in Paris (March 29, 2026), here are three family-friendly recommendations:
+
+1. **Jardin du Luxembourg**: A classic choice with a beautiful playground, puppet shows, and space for kids to run. It is best enjoyed if the weather is mild.
+2. **Cité des Sciences et de l'Industrie**: An excellent indoor science museum at Parc de la Villette, perfect if the weather turns rainy or chilly.
+3. **Musée de l'Orangerie**: Located in the Tuileries Garden, this is a manageable museum size for families, offering a great cultural experience indoors.
+
+**Weather Context:** March 29, 2026, in Paris marks the start of Daylight Saving Time. While early spring weather can be unpredictable, it is generally cool. Given the potential for typical spring showers, I recommend the **Cité des Sciences et de l'Industrie** as the most appropriate activity, as it provides a high-quality, weather-proof experience for the whole family.
+
+For your Sunday in Paris (March 29, 2026), here are three family-friendly recommendations:
+
+1. **Jardin du Luxembourg**: A classic choice with a beautiful playground, puppet shows, and space for kids to sail toy boats in the pond. Best if the weather is mild.
+2. **Cité des Sciences et de l'Industrie**: An excellent indoor science museum at Parc de la Villette, perfect if the weather is rainy or chilly.
+3. **Muséum National d'Histoire Naturelle (Jardin des Plantes)**: Features the Grande Galerie de l'Évolution, which is fascinating for children and entirely indoors.
+
+**Recommendation:** Given that March weather in Paris can be unpredictable and often cool or rainy, the **Cité des Sciences et de l'Industrie** is the most appropriate choice to ensure your family has a fun day regardless of the forecast.
+
+For your Sunday in Paris (March 29, 2026), here are three family-friendly recommendations:
+
+1. **Jardin du Luxembourg**: A classic choice for families, featuring a large playground, pony rides, and the famous toy sailboat pond. It's perfect for a pleasant Sunday stroll.
+2. **Cité des Sciences et de l'Industrie**: Located in Parc de la Villette, this is Europe's largest science museum with a dedicated 'Cité des Enfants' area, making it an excellent indoor option if the weather is unpredictable.
+3. **Muséum National d'Histoire Naturelle (Jardin des Plantes)**: The Grande Galerie de l'Évolution is visually stunning for children and adults alike, offering a great indoor experience.
+
+**Weather Recommendation:** March 29 in Paris is typically cool and transitional as spring begins. Since the weather can be variable, the **Cité des Sciences et de l'Industrie** is the most appropriate recommendation, as it provides a high-quality indoor experience that ensures your family plans won't be disrupted by potential spring showers or chilly temperatures.
+
+For your Sunday in Paris (March 29, 2026), here are three family-friendly recommendations:
+
+1. **Jardin du Luxembourg**: A classic choice with a large playground, pony rides, and the famous puppet theater (Théâtre des Marionnettes).
+2. **Cité des Sciences et de l'Industrie**: An excellent indoor science museum at Parc de la Villette, perfect if the weather is unpredictable.
+3. **Muséum National d'Histoire Naturelle (Jardin des Plantes)**: The Gallery of Evolution is captivating for children of all ages.
+
+**Weather Recommendation:**
+March 29, 2026, marks the start of Daylight Saving Time in Paris. While spring is arriving, the weather can be variable. Given the potential for typical spring showers, I recommend the **Cité des Sciences et de l'Industrie** as your primary choice, as it provides a fantastic indoor experience that ensures your family plans won't be disrupted by the weather.</div>
+  </div>
+</main>
+
+<script>
+/* ── Helpers ──────────────────────────────────────────────────────────── */
+function esc(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function tb() { return document.getElementById('trace-body'); }
+
+function addIterDivider(iter) {
+  const d = document.createElement('div');
+  d.className = 'iter-divider';
+  d.textContent = `─── iter ${iter} ───`;
+  tb().appendChild(d);
+}
+
+function addRow(badgeClass, badgeText, contentHtml) {
+  const row = document.createElement('div');
+  row.className = 'trace-row';
+  row.innerHTML =
+    `<span class="layer-badge ${badgeClass}">${esc(badgeText)}</span>` +
+    `<span class="trace-content">${contentHtml}</span>`;
+  tb().appendChild(row);
+  row.scrollIntoView({ block: 'nearest' });
+}
+
+function renderGoals(goals) {
+  return (goals || []).map(g => {
+    const cls = g.done ? 'goal-chip goal-done' : 'goal-chip goal-open';
+    const icon = g.done ? '✓' : '○';
+    return `<span class="${cls}">${icon} ${esc(g.text)}</span>`;
+  }).join('');
+}
+
+/* ── Event dispatcher ─────────────────────────────────────────────────── */
+function handleEvent(ev) {
+  switch (ev.type) {
+
+    case 'start':
+      document.getElementById('run-id-label').textContent = ev.run_id;
+      document.getElementById('status-label').innerHTML =
+        '<span class="spinner"></span><span class="status-running">running…</span>';
+      break;
+
+    case 'iter_start':
+      addIterDivider(ev.iter);
+      break;
+
+    case 'memory': {
+      let c = `${ev.hits} hit${ev.hits !== 1 ? 's' : ''}`;
+      if (ev.preview) c += `&nbsp;<span class="muted">· ${esc(ev.preview)}</span>`;
+      addRow('badge-memory', '[memory]', c);
+      break;
+    }
+
+    case 'perception': {
+      if (!ev.goals?.length) break;
+      addRow('badge-perception', '[perception]',
+        `<div class="goals">${renderGoals(ev.goals)}</div>`);
+      break;
+    }
+
+    case 'attach': {
+      const kb = (ev.bytes / 1024).toFixed(0);
+      addRow('badge-attach', '[attach]',
+        `<span class="art-id">${esc(ev.artifact_id)}</span>&nbsp;` +
+        `<span class="muted">· ${kb} KB attached</span>`);
+      break;
+    }
+
+    case 'decision_tool': {
+      const args = ev.args_preview
+        ? `<span class="muted">(${esc(ev.args_preview)})</span>` : '';
+      addRow('badge-decision', '[decision]',
+        `TOOL_CALL:&nbsp;<span class="tool-name">${esc(ev.tool)}</span>&nbsp;${args}`);
+      break;
+    }
+
+    case 'decision_answer':
+      addRow('badge-decision', '[decision]',
+        `ANSWER:&nbsp;<span class="muted">${esc(ev.preview)}</span>`);
+      break;
+
+    case 'action': {
+      let c = '';
+      if (ev.artifact_id) {
+        c = `→&nbsp;<span class="art-id">[${esc(ev.artifact_id)}]</span>&nbsp;`;
+      } else {
+        c = '→&nbsp;';
+      }
+      c += `<span class="muted">${esc(ev.preview)}</span>`;
+      addRow('badge-action', '[action]', c);
+      break;
+    }
+
+    case 'complete':
+      addRow('badge-done', '[done]', 'all goals satisfied');
+      break;
+
+    case 'done': {
+      document.getElementById('status-label').innerHTML =
+        '<span class="status-done">✓ complete</span>';
+      document.getElementById('run-btn').disabled = false;
+      document.getElementById('run-btn').textContent = '▶ Run';
+
+      const ap = document.getElementById('answer-panel');
+      document.getElementById('answer-body').textContent = ev.answer || '(no answer)';
+      ap.style.display = 'block';
+      ap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      if (window._src) { window._src.close(); window._src = null; }
+      break;
+    }
+
+    case 'error':
+      document.getElementById('status-label').innerHTML =
+        `<span class="status-error">✗ ${esc(ev.message || 'error')}</span>`;
+      document.getElementById('run-btn').disabled = false;
+      document.getElementById('run-btn').textContent = '▶ Run';
+      if (window._src) { window._src.close(); window._src = null; }
+      break;
+  }
+}
+
+/* ── Run trigger ──────────────────────────────────────────────────────── */
+async function startRun() {
+  const query = document.getElementById('query-input').value.trim();
+  if (!query) return;
+
+  // Reset UI
+  document.getElementById('run-btn').disabled = true;
+  document.getElementById('run-btn').textContent = '⏳';
+  tb().innerHTML = '';
+  document.getElementById('answer-panel').style.display = 'none';
+  document.getElementById('answer-body').textContent = '';
+  document.getElementById('trace-panel').style.display = 'block';
+  document.getElementById('run-id-label').textContent = '…';
+  document.getElementById('status-label').innerHTML =
+    '<span class="spinner"></span><span class="status-running">connecting…</span>';
+
+  if (window._src) { window._src.close(); window._src = null; }
+
+  // POST /run
+  let runId;
+  try {
+    const res = await fetch('/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+    runId = (await res.json()).run_id;
+  } catch (e) {
+    document.getElementById('status-label').innerHTML =
+      `<span class="status-error">✗ failed to start: ${esc(e.message)}</span>`;
+    document.getElementById('run-btn').disabled = false;
+    document.getElementById('run-btn').textContent = '▶ Run';
+    return;
+  }
+
+  // Open SSE stream
+  const src = new EventSource(`/run/${runId}/stream`);
+  window._src = src;
+
+  src.onmessage = (e) => {
+    try { handleEvent(JSON.parse(e.data)); }
+    catch (err) { console.error('SSE parse error:', err, e.data); }
+  };
+
+  src.onerror = () => {
+    // Only show error if we haven't already completed cleanly
+    if (window._src) {
+      document.getElementById('status-label').innerHTML =
+        '<span class="status-error">✗ stream disconnected</span>';
+      document.getElementById('run-btn').disabled = false;
+      document.getElementById('run-btn').textContent = '▶ Run';
+      src.close(); window._src = null;
+    }
+  };
+}
+
+// Ctrl+Enter / Cmd+Enter submits
+document.getElementById('query-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) startRun();
+});
+</script>
+
+
+</body></html>
