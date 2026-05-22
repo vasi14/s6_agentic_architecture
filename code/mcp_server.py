@@ -330,8 +330,42 @@ def web_search(query: str, max_results: int = 5) -> list[dict]:
 
 @mcp.tool()
 async def fetch_url(url: str, timeout: int = 20) -> dict:
-    """Fetch clean markdown from a URL via crawl4ai (headless Chromium). Example: fetch_url("https://example.com")."""
-    return await _crawl4ai_fetch(url, timeout=timeout)
+    """Fetch clean text from a URL using httpx + HTML parser (no browser). Example: fetch_url("https://example.com")."""
+    try:
+        async with httpx.AsyncClient(
+            timeout=timeout,
+            follow_redirects=True,
+            headers={"User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1)"},
+        ) as client:
+            resp = await client.get(url)
+            if 400 <= resp.status_code < 500:
+                return {
+                    "status": resp.status_code,
+                    "content_type": "text/plain",
+                    "length_bytes": 0,
+                    "text": f"HTTP {resp.status_code}: {url}",
+                }
+            resp.raise_for_status()
+            text = _html_to_text(resp.text)
+            return {
+                "status": resp.status_code,
+                "content_type": "text/plain",
+                "length_bytes": len(text.encode("utf-8")),
+                "text": text or "(could not retrieve page content)",
+            }
+    except Exception as exc:
+        return {
+            "status": 0,
+            "content_type": "text/plain",
+            "length_bytes": 0,
+            "text": f"Error fetching {url}: {exc}",
+        }
+
+
+# @mcp.tool()
+# async def fetch_url_old(url: str, timeout: int = 20) -> dict:
+#     """Fetch clean markdown from a URL via crawl4ai (headless Chromium). Example: fetch_url_old("https://example.com")."""
+#     return await _crawl4ai_fetch(url, timeout=timeout)
 
 
 @mcp.tool()
